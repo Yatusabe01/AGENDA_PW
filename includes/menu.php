@@ -1,9 +1,12 @@
 <?php
-require_once __DIR__ . '/functions.php';
-
-$currentPage = basename(isset($_SERVER['PHP_SELF']) ? (string) $_SERVER['PHP_SELF'] : 'index.php');
+$currentPage = basename($_SERVER['PHP_SELF'] ?? 'index.php');
+$menuItems = [
+    'index.php' => 'Inicio',
+    'crear.php' => 'Nuevo contacto',
+];
 ?>
-<nav class="menu" aria-label="Navegación principal">
-    <a href="index.php"<?php echo $currentPage === 'index.php' ? ' class="active" aria-current="page"' : ''; ?>>Contactos</a>
-    <a href="crear.php"<?php echo $currentPage === 'crear.php' ? ' class="active" aria-current="page"' : ''; ?>>Nuevo contacto</a>
+<nav class="site-nav" aria-label="Navegación principal">
+    <ul><?php foreach ($menuItems as $file => $label): ?>
+        <li><a class="nav-link<?php echo $currentPage === $file ? ' active' : ''; ?>" href="<?php echo h($file); ?>"<?php echo $currentPage === $file ? ' aria-current="page"' : ''; ?>><?php echo h($label); ?></a></li>
+    <?php endforeach; ?></ul>
 </nav>
