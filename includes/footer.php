@@ -1,6 +1,8 @@
+</main>
 <footer class="site-footer">
-    <p>Agenda de contactos</p>
+    <div class="container">
+        <p>Programación Web — Unidad 4</p>
+    </div>
 </footer>
-</div>
 </body>
 </html>
