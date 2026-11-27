@@ -1,5 +1,5 @@
 <?php
-// El estudiante debe reemplazar estos valores por las credenciales de su hosting.
+// Credenciales de base de datos en InfinityFree.
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'nombre_base_de_datos');
 define('DB_USER', 'usuario_base_de_datos');

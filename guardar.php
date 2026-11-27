@@ -28,6 +28,28 @@ if (count($errors) > 0) {
     redirect('crear.php');
 }
 
+try {
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM contactos WHERE telefono = :telefono');
+    $stmt->execute([':telefono' => $clean['telefono']]);
+    if ((int) $stmt->fetchColumn() > 0) {
+        flash('error', 'Ya existe un contacto con ese teléfono.');
+        redirect('crear.php');
+    }
+
+    if ($clean['email'] !== '') {
+        $stmt = $pdo->prepare('SELECT COUNT(*) FROM contactos WHERE email = :email');
+        $stmt->execute([':email' => $clean['email']]);
+        if ((int) $stmt->fetchColumn() > 0) {
+            flash('error', 'Ya existe un contacto con ese correo electrónico.');
+            redirect('crear.php');
+        }
+    }
+} catch (PDOException $e) {
+    error_log('Error al verificar contacto duplicado: ' . $e->getMessage());
+    flash('error', 'No se pudo guardar el contacto. Intente nuevamente.');
+    redirect('crear.php');
+}
+
 $file = isset($_FILES['foto']) && is_array($_FILES['foto']) ? $_FILES['foto'] : [];
 list($photo, $uploadError) = upload_photo($file, true);
 if ($uploadError !== null) {
@@ -55,7 +77,11 @@ try {
     if ($photo !== null) {
         delete_photo($photo);
     }
-    flash('error', 'No se pudo guardar el contacto. Intente nuevamente.');
+    if ($e->getCode() === '23000') {
+        flash('error', 'Ya existe un contacto con ese teléfono o correo electrónico.');
+    } else {
+        flash('error', 'No se pudo guardar el contacto. Intente nuevamente.');
+    }
     redirect('crear.php');
 }
 

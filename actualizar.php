@@ -49,6 +49,28 @@ if (count($errors) > 0) {
     redirect('editar.php?id=' . $id);
 }
 
+try {
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM contactos WHERE telefono = :telefono AND id <> :id');
+    $stmt->execute([':telefono' => $clean['telefono'], ':id' => $id]);
+    if ((int) $stmt->fetchColumn() > 0) {
+        flash('error', 'Ya existe un contacto con ese teléfono.');
+        redirect('editar.php?id=' . $id);
+    }
+
+    if ($clean['email'] !== '') {
+        $stmt = $pdo->prepare('SELECT COUNT(*) FROM contactos WHERE email = :email AND id <> :id');
+        $stmt->execute([':email' => $clean['email'], ':id' => $id]);
+        if ((int) $stmt->fetchColumn() > 0) {
+            flash('error', 'Ya existe un contacto con ese correo electrónico.');
+            redirect('editar.php?id=' . $id);
+        }
+    }
+} catch (PDOException $e) {
+    error_log('Error al verificar contacto duplicado: ' . $e->getMessage());
+    flash('error', 'No se pudo actualizar el contacto. Intente nuevamente.');
+    redirect('editar.php?id=' . $id);
+}
+
 $file = isset($_FILES['foto']) && is_array($_FILES['foto']) ? $_FILES['foto'] : [];
 list($photo, $uploadError) = upload_photo($file, false);
 if ($uploadError !== null) {
@@ -85,7 +107,11 @@ try {
     if ($photo !== null) {
         delete_photo($photo);
     }
-    flash('error', 'No se pudo actualizar el contacto. Intente nuevamente.');
+    if ($e->getCode() === '23000') {
+        flash('error', 'Ya existe un contacto con ese teléfono o correo electrónico.');
+    } else {
+        flash('error', 'No se pudo actualizar el contacto. Intente nuevamente.');
+    }
     redirect('editar.php?id=' . $id);
 }
 

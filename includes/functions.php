@@ -106,10 +106,8 @@ function validate_contact($data)
 
     if ($clean['telefono'] === '') {
         $errors[] = 'El teléfono es obligatorio.';
-    } elseif (!preg_match('/^[0-9+()\s-]{7,40}$/', $clean['telefono'])) {
-        $errors[] = 'El teléfono solo puede contener números, espacios, +, - y paréntesis.';
-    } elseif (preg_match_all('/\d/', $clean['telefono']) < 7) {
-        $errors[] = 'El teléfono debe tener al menos 7 dígitos.';
+    } elseif (!preg_match('/^\d{7,15}$/', $clean['telefono'])) {
+        $errors[] = 'El teléfono debe contener solo números (entre 7 y 15 dígitos).';
     }
 
     if ($clean['email'] !== '' && !filter_var($clean['email'], FILTER_VALIDATE_EMAIL)) {

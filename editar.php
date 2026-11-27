@@ -82,7 +82,7 @@ require __DIR__ . '/includes/header.php';
             </div>
             <div class="field">
                 <label for="telefono">Teléfono <span class="required">*</span></label>
-                <input id="telefono" name="telefono" type="tel" minlength="7" maxlength="40" pattern="[0-9+() -]{7,40}" autocomplete="tel" required value="<?php echo h(old_value($old, 'telefono', (string) $contact['telefono'])); ?>">
+                <input id="telefono" name="telefono" type="tel" minlength="7" maxlength="15" pattern="[0-9]{7,15}" autocomplete="tel" required value="<?php echo h(old_value($old, 'telefono', (string) $contact['telefono'])); ?>">
             </div>
             <div class="field">
                 <label for="foto">Nueva foto</label>
