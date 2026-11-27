@@ -5,11 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 function h($value)
 {
-    if ($value === null) {
-        return '';
-    }
-
-    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+    return htmlspecialchars($value === null ? '' : (string) $value, ENT_QUOTES, 'UTF-8');
 }
 
 function redirect($location)
@@ -20,19 +16,20 @@ function redirect($location)
 
 function flash($type, $message)
 {
+    if (!isset($_SESSION['flash']) || !is_array($_SESSION['flash'])) {
+        $_SESSION['flash'] = [];
+    }
     $_SESSION['flash'][$type] = $message;
 }
 
 function take_flash($type, $default = null)
 {
-    if (!isset($_SESSION['flash'][$type])) {
+    if (!isset($_SESSION['flash']) || !is_array($_SESSION['flash']) || !array_key_exists($type, $_SESSION['flash'])) {
         return $default;
     }
-
-    $messages = $_SESSION['flash'][$type];
+    $value = $_SESSION['flash'][$type];
     unset($_SESSION['flash'][$type]);
-
-    return $messages;
+    return $value;
 }
 
 function csrf_token()
@@ -40,7 +37,6 @@ function csrf_token()
     if (empty($_SESSION['csrf_token']) || !is_string($_SESSION['csrf_token'])) {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     }
-
     return $_SESSION['csrf_token'];
 }
 
@@ -51,11 +47,10 @@ function csrf_field()
 
 function csrf_is_valid($token)
 {
-    if (!is_string($token)) {
-        return false;
-    }
-
-    return hash_equals(csrf_token(), $token);
+    return is_string($token)
+        && isset($_SESSION['csrf_token'])
+        && is_string($_SESSION['csrf_token'])
+        && hash_equals($_SESSION['csrf_token'], $token);
 }
 
 function input($key, $default = '')
@@ -63,7 +58,6 @@ function input($key, $default = '')
     if (!isset($_POST[$key]) || is_array($_POST[$key])) {
         return $default;
     }
-
     return trim((string) $_POST[$key]);
 }
 
@@ -72,86 +66,64 @@ function old_value(array $old, $key, $default = '')
     if (!array_key_exists($key, $old) || is_array($old[$key])) {
         return $default;
     }
-
     return (string) $old[$key];
 }
 
 function to_id($value)
 {
-    if (is_array($value) || is_object($value)) {
-        return 0;
-    }
-
-    $id = filter_var($value, FILTER_VALIDATE_INT);
-
-    if ($id === false || $id < 1) {
-        return 0;
-    }
-
-    return $id;
+    $id = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    return $id === false ? 0 : (int) $id;
 }
 
 function is_too_long($value, $max)
 {
-    $text = (string) $value;
-    $length = function_exists('mb_strlen') ? mb_strlen($text, 'UTF-8') : strlen($text);
-
-    return $length > $max;
+    return function_exists('mb_strlen')
+        ? mb_strlen($value, 'UTF-8') > $max
+        : strlen($value) > $max;
 }
 
 function validate_contact($data)
 {
-    $value = static function ($key) use ($data) {
-        if (is_array($data) && isset($data[$key]) && !is_array($data[$key])) {
-            return trim((string) $data[$key]);
-        }
-
-        return '';
-    };
-
     $clean = [
-        'nombre' => $value('nombre'),
-        'apellido' => $value('apellido'),
-        'telefono' => $value('telefono'),
-        'email' => $value('email'),
-        'direccion' => $value('direccion'),
-        'notas' => $value('notas'),
+        'nombre' => isset($data['nombre']) ? (string) $data['nombre'] : '',
+        'apellido' => isset($data['apellido']) ? (string) $data['apellido'] : '',
+        'telefono' => isset($data['telefono']) ? (string) $data['telefono'] : '',
+        'email' => isset($data['email']) ? (string) $data['email'] : '',
+        'direccion' => isset($data['direccion']) ? (string) $data['direccion'] : '',
+        'notas' => isset($data['notas']) ? (string) $data['notas'] : '',
     ];
-
     $errors = [];
 
     if ($clean['nombre'] === '') {
-        $errors['nombre'] = 'El nombre es obligatorio.';
+        $errors[] = 'El nombre es obligatorio.';
     } elseif (is_too_long($clean['nombre'], 100)) {
-        $errors['nombre'] = 'El nombre no puede superar los 100 caracteres.';
+        $errors[] = 'El nombre no puede superar 100 caracteres.';
     }
 
     if (is_too_long($clean['apellido'], 100)) {
-        $errors['apellido'] = 'El apellido no puede superar los 100 caracteres.';
+        $errors[] = 'El apellido no puede superar 100 caracteres.';
     }
 
     if ($clean['telefono'] === '') {
-        $errors['telefono'] = 'El teléfono es obligatorio.';
+        $errors[] = 'El teléfono es obligatorio.';
     } elseif (!preg_match('/^[0-9+()\s-]{7,40}$/', $clean['telefono'])) {
-        $errors['telefono'] = 'El teléfono solo puede contener números, espacios y los símbolos + ( ) -.';
-    } elseif (preg_match_all('/\d/', $clean['telefono'], $matches) < 7) {
-        $errors['telefono'] = 'El teléfono debe tener al menos 7 dígitos.';
+        $errors[] = 'El teléfono solo puede contener números, espacios, +, - y paréntesis.';
+    } elseif (preg_match_all('/\d/', $clean['telefono']) < 7) {
+        $errors[] = 'El teléfono debe tener al menos 7 dígitos.';
     }
 
-    if ($clean['email'] !== '') {
-        if (is_too_long($clean['email'], 255)) {
-            $errors['email'] = 'El correo electrónico no puede superar los 255 caracteres.';
-        } elseif (filter_var($clean['email'], FILTER_VALIDATE_EMAIL) === false) {
-            $errors['email'] = 'El correo electrónico no es válido.';
-        }
+    if ($clean['email'] !== '' && !filter_var($clean['email'], FILTER_VALIDATE_EMAIL)) {
+        $errors[] = 'El correo electrónico no tiene un formato válido.';
+    } elseif (is_too_long($clean['email'], 255)) {
+        $errors[] = 'El correo electrónico no puede superar 255 caracteres.';
     }
 
     if (is_too_long($clean['direccion'], 255)) {
-        $errors['direccion'] = 'La dirección no puede superar los 255 caracteres.';
+        $errors[] = 'La dirección no puede superar 255 caracteres.';
     }
 
     if (is_too_long($clean['notas'], 2000)) {
-        $errors['notas'] = 'Las notas no pueden superar los 2000 caracteres.';
+        $errors[] = 'Las notas no pueden superar 2000 caracteres.';
     }
 
     return [$clean, $errors];
@@ -159,75 +131,59 @@ function validate_contact($data)
 
 function upload_photo(array $file, $required)
 {
-    $errorCode = isset($file['error']) && !is_array($file['error']) ? (int) $file['error'] : UPLOAD_ERR_NO_FILE;
-
-    if ($errorCode === UPLOAD_ERR_NO_FILE) {
-        return ['', $required ? 'La foto es obligatoria.' : null];
+    if (!isset($file['error']) || is_array($file['error'])) {
+        return [null, 'No se recibió una foto válida.'];
     }
 
-    if ($errorCode !== UPLOAD_ERR_OK) {
-        return ['', 'No se pudo subir la foto. Inténtalo de nuevo.'];
+    $error = (int) $file['error'];
+    if ($error === UPLOAD_ERR_NO_FILE) {
+        return $required ? [null, 'La foto es obligatoria.'] : [null, null];
     }
 
-    if (empty($file['tmp_name']) || is_array($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
-        return ['', 'No se pudo subir la foto. Inténtalo de nuevo.'];
+    if ($error !== UPLOAD_ERR_OK) {
+        return [null, 'No se pudo subir la foto. Intente nuevamente.'];
     }
 
-    $size = isset($file['size']) && !is_array($file['size']) ? (int) $file['size'] : 0;
-
-    if ($size > 2 * 1024 * 1024) {
-        return ['', 'La foto no puede superar los 2 MB.'];
+    if (!isset($file['tmp_name']) || !is_string($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+        return [null, 'No se pudo subir la foto. Intente nuevamente.'];
     }
 
-    $original = isset($file['name']) && !is_array($file['name'])
-        ? basename(str_replace('\\', '/', (string) $file['name']))
-        : '';
+    if ((int) $file['size'] > 2 * 1024 * 1024) {
+        return [null, 'La foto no puede superar 2 MB.'];
+    }
 
-    $mimeTypes = [
+    if (!function_exists('finfo_open') || !function_exists('finfo_file')) {
+        return [null, 'No se puede validar el tipo de imagen en este servidor.'];
+    }
+
+    $allowed = [
         'image/jpeg' => 'jpg',
         'image/png' => 'png',
         'image/gif' => 'gif',
         'image/webp' => 'webp',
     ];
-
-    $mime = false;
-
-    if (function_exists('finfo_open')) {
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-
-        if ($finfo !== false) {
-            $mime = finfo_file($finfo, $file['tmp_name']);
-            finfo_close($finfo);
-        }
+    $info = finfo_open(FILEINFO_MIME_TYPE);
+    if ($info === false) {
+        return [null, 'No se puede validar el tipo de imagen en este servidor.'];
+    }
+    $mime = (string) finfo_file($info, $file['tmp_name']);
+    finfo_close($info);
+    if (!isset($allowed[$mime])) {
+        return [null, 'La foto debe ser JPEG, PNG, GIF o WebP.'];
     }
 
-    $extension = '';
-
-    if (is_string($mime) && isset($mimeTypes[$mime])) {
-        $extension = $mimeTypes[$mime];
-    } elseif ($mime === false && $original !== '') {
-        $fallback = strtolower(pathinfo($original, PATHINFO_EXTENSION));
-        $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-
-        if (in_array($fallback, $allowed, true)) {
-            $extension = $fallback === 'jpeg' ? 'jpg' : $fallback;
-        }
-    }
-
-    if ($extension === '') {
-        return ['', 'La foto debe ser una imagen JPEG, PNG, GIF o WebP.'];
-    }
-
-    $directory = __DIR__ . '/../archivos/';
-
-    if (!is_dir($directory)) {
-        return ['', 'No se pudo guardar la foto. Inténtalo de nuevo.'];
+    $originalName = isset($file['name']) && is_string($file['name'])
+        ? basename(str_replace('\\', '/', $file['name']))
+        : '';
+    $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+    if (!in_array($extension, $allowed, true)) {
+        $extension = $allowed[$mime];
     }
 
     $filename = bin2hex(random_bytes(16)) . '.' . $extension;
-
-    if (!move_uploaded_file($file['tmp_name'], $directory . $filename)) {
-        return ['', 'No se pudo guardar la foto. Inténtalo de nuevo.'];
+    $destination = __DIR__ . '/../archivos/' . $filename;
+    if (!move_uploaded_file($file['tmp_name'], $destination)) {
+        return [null, 'No se pudo guardar la foto. Intente nuevamente.'];
     }
 
     return [$filename, null];
@@ -235,43 +191,34 @@ function upload_photo(array $file, $required)
 
 function delete_photo($filename)
 {
-    $filename = basename((string) $filename);
-
-    if ($filename === '' || $filename === '.' || $filename === '..') {
-        return;
+    if (!is_string($filename) || $filename === '') {
+        return false;
     }
 
-    $path = __DIR__ . '/../archivos/' . $filename;
-
-    if (is_file($path)) {
-        @unlink($path);
+    $safeName = basename(str_replace('\\', '/', $filename));
+    if ($safeName !== $filename || $safeName === '.' || $safeName === '..') {
+        return false;
     }
+
+    $path = __DIR__ . '/../archivos/' . $safeName;
+    if (!is_file($path)) {
+        return false;
+    }
+
+    return @unlink($path);
 }
 
 function photo_src($filename)
 {
-    $filename = basename((string) $filename);
-
-    if ($filename === '' || $filename === '.' || $filename === '..') {
+    if (!is_string($filename) || $filename === '') {
         return '';
     }
-
     return 'archivos/' . rawurlencode($filename);
 }
 
 function display_name($contact)
 {
-    $value = static function ($key) use ($contact) {
-        if (is_array($contact)) {
-            return isset($contact[$key]) && !is_array($contact[$key]) ? (string) $contact[$key] : '';
-        }
-
-        if (is_object($contact)) {
-            return isset($contact->$key) && !is_array($contact->$key) ? (string) $contact->$key : '';
-        }
-
-        return '';
-    };
-
-    return trim($value('nombre') . ' ' . $value('apellido'));
+    $first = isset($contact['nombre']) ? trim((string) $contact['nombre']) : '';
+    $last = isset($contact['apellido']) ? trim((string) $contact['apellido']) : '';
+    return trim($first . ' ' . $last);
 }
