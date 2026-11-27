@@ -1,10 +1,10 @@
 # Agenda de contactos con PHP y PDO
 
-Esta aplicación permite registrar, listar, buscar, consultar, editar y eliminar contactos con fotografía desde un navegador. Está pensada para la Unidad 4 de Programación Web: usa PHP 7.4+, PDO con MySQL/MariaDB, HTML5 y CSS externo, con validación y protección básica tanto en el cliente como en el servidor.
+Esta aplicación permite registrar, listar, buscar, consultar, editar y eliminar contactos con fotografía desde un navegador. Está pensada para la Unidad 4 de Programación Web: usa PHP 7.4+, PDO con MySQL, HTML5 y CSS externo, con validación y protección básica tanto en el cliente como en el servidor.
 
 ## Quick path
 
-1. Importe `schema.sql` en su base de datos MySQL/MariaDB. Si la tabla ya existía, agregue las restricciones de unicidad indicadas abajo.
+1. Importe `schema.sql` en su base de datos MySQL. Si la tabla ya existía, agregue las restricciones de unicidad indicadas abajo.
 2. Edite las constantes de conexión en `config/db.php` con las credenciales de su hosting. El archivo versionado usa placeholders; los valores reales solo deben configurarse en el servidor.
 3. Suba todo el proyecto al servidor, asegúrese de que `archivos/` tenga permisos de escritura y abra la URL pública de despliegue.
 4. Compruebe el flujo completo: crear un contacto, buscarlo, ver su detalle, editarlo y eliminarlo.
@@ -23,7 +23,7 @@ ALTER TABLE contactos
 |------|----------|
 | Equipo | Sebastian Emiliano Anzueto Escobar<br>Cesar Francisco Salazar Sanchez<br>Manuel de Jesus Flores de la Cruz |
 | Materia | Programación Web — Unidad 4 |
-| Tecnologías | PHP 7.4+, PDO, MySQL/MariaDB, HTML5, CSS |
+| Tecnologías | PHP 7.4+, PDO, MySQL, HTML5, CSS |
 | Funcionalidades | Alta, listado, búsqueda, detalle, edición, baja, carga de foto, mensajes flash, protección CSRF y validación de duplicados |
 | Repositorio público | https://github.com/Yatusabe01/AGENDA_PW |
 | URL desplegada | https://agendabd.ct.ws/index.php |
