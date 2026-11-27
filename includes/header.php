@@ -1,66 +1,27 @@
 <?php
-require_once __DIR__ . '/functions.php';
-
-if (!isset($pageTitle) || !is_string($pageTitle) || $pageTitle === '') {
-    $pageTitle = 'Agenda de contactos';
-}
+$pageTitle = isset($pageTitle) ? $pageTitle : 'Agenda de contactos';
+$successMessage = take_flash('success');
+$errorMessage = take_flash('error');
 ?>
 <!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?php echo h($pageTitle); ?></title>
+    <title><?php echo h($pageTitle); ?> — Agenda</title>
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-<div class="container">
-    <?php
-    $messages = take_flash('success', []);
-
-    if (!is_array($messages)) {
-        $messages = [$messages];
-    }
-
-    foreach ($messages as $message) {
-        if ($message === null || $message === '') {
-            continue;
-        }
-
-        echo '<div class="alert alert-success" role="alert">' . h($message) . '</div>';
-    }
-
-    $messages = take_flash('error', []);
-
-    if (!is_array($messages)) {
-        $messages = [$messages];
-    }
-
-    foreach ($messages as $message) {
-        if ($message === null || $message === '') {
-            continue;
-        }
-
-        echo '<div class="alert alert-error" role="alert">' . h($message) . '</div>';
-    }
-
-    $errors = take_flash('errors', []);
-
-    if (!is_array($errors)) {
-        $errors = [$errors];
-    }
-
-    if ($errors !== []) {
-        echo '<div class="alert alert-error" role="alert"><ul>';
-
-        foreach ($errors as $error) {
-            if ($error === null || $error === '') {
-                continue;
-            }
-
-            echo '<li>' . h($error) . '</li>';
-        }
-
-        echo '</ul></div>';
-    }
-    ?>
+<header class="site-header">
+    <div class="container header-inner">
+        <a class="brand" href="index.php">Agenda</a>
+        <?php require __DIR__ . '/menu.php'; ?>
+    </div>
+</header>
+<main class="container">
+    <?php if ($successMessage): ?>
+        <div class="alert alert-success" role="status"><?php echo h($successMessage); ?></div>
+    <?php endif; ?>
+    <?php if ($errorMessage): ?>
+        <div class="alert alert-error" role="alert"><?php echo h($errorMessage); ?></div>
+    <?php endif; ?>
